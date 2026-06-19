@@ -1,4 +1,4 @@
-package unl.edu.cc;
+package unl.edu.cc.APE06;
 
 public class TareaDeServidor {
     private String descripcion;
