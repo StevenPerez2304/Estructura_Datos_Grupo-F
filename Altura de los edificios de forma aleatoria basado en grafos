@@ -1,76 +1,79 @@
-// ---------- Configuración Geográfica para Loja, Ecuador ----------
-const CENTER = [-3.9931, -79.2042]; 
+﻿// ---------- Configuración Geográfica para Loja, Ecuador ----------
+const CENTER = [-3.9931, -79.2042];
 const map = L.map('map', {zoomControl:true}).setView(CENTER, 15);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution:'&copy; OpenStreetMap contributors', maxZoom:19
+attribution:'&copy; OpenStreetMap contributors', maxZoom:19
 }).addTo(map);
 
 // ---------- 1. Alta Densidad de Nodos en el Espacio ----------
-const ROWS = 15, COLS = 15;
-const ALTS = [50, 100, 150];
+// Se aumenta la resolución de la grilla (ROWS x COLS) y el número de niveles
+// de altitud (ALTS) para incrementar tanto la densidad como el número total
+// de nodos del grafo. Con ROWS=30, COLS=30 y 5 niveles de altitud se pasa de
+// 15*15*3 = 675 nodos a 30*30*5 = 4500 nodos (~6.7x más nodos).
+const ROWS = 30, COLS = 30;
+const ALTS = [50, 75, 100, 125, 150];
 const SPAN_LAT = 0.015, SPAN_LON = 0.018;
 const latMin = CENTER[0] - SPAN_LAT/2, lonMin = CENTER[1] - SPAN_LON/2;
 const stepLat = SPAN_LAT/(ROWS-1), stepLon = SPAN_LON/(COLS-1);
 
 // ---------- 2. Modelo de Consumo de Batería ----------
-const ENERGY_FACTOR = {50:1.00, 100:1.25, 150:1.55};
-const CLIMB_COST = 0.08; 
+const ENERGY_FACTOR = {50:1.00, 75:1.12, 100:1.25, 125:1.40, 150:1.55};
+const CLIMB_COST = 0.08;
 
 // ---------- 3. Zonas Restringidas (No-Fly Zones) ----------
 const AIRSPACE_ZONES = [
-  {lat: CENTER[0]+0.003, lon: CENTER[1]+0.002, radiusKm: 0.25, alts:['all']},
-  {lat: CENTER[0]-0.003, lon: CENTER[1]-0.002, radiusKm: 0.20, alts:[50, 100]}
+{lat: CENTER[0]+0.003, lon: CENTER[1]+0.002, radiusKm: 0.25, alts:['all']},
+{lat: CENTER[0]-0.003, lon: CENTER[1]-0.002, radiusKm: 0.20, alts:[50, 75, 100]}
 ];
 
 function haversineKm(lat1,lon1,lat2,lon2){
-  const R=6371, toRad=d=>d*Math.PI/180;
-  const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
-  const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
+const R=6371, toRad=d=>d*Math.PI/180;
+const dLat=toRad(lat2-lat1), dLon=toRad(lon2-lon1);
+const a=Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLon/2)**2;
+return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
 let buildings = [];
 
 // ---------- 4. Alturas Aleatorias en Edificios ----------
 async function fetchBuildings(){
-  const south = latMin, north = latMin+SPAN_LAT, west = lonMin, east = lonMin+SPAN_LON;
-  const query = `[out:json][timeout:25];(way["building"](${south},${west},${north},${east}););out geom;`;
-  const url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
-  const res = await fetch(url);
-  if(!res.ok) throw new Error('overpass error');
-  const data = await res.json();
-  
-  const possibleAlts = [50, 100, 150];
-  return data.elements
-    .filter(el => el.type === 'way' && el.geometry)
-    .map(el => ({
-      coords: el.geometry.map(g => [g.lat, g.lon]),
-      maxAlt: possibleAlts[Math.floor(Math.random() * possibleAlts.length)]
-    }));
+const south = latMin, north = latMin+SPAN_LAT, west = lonMin, east = lonMin+SPAN_LON;
+const query = `[out:json][timeout:25];(way["building"](${south},${west},${north},${east}););out geom;`;
+const url = 'https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(query);
+const res = await fetch(url);
+if(!res.ok) throw new Error('overpass error');
+const data = await res.json();
+const possibleAlts = [50, 100, 150];
+return data.elements
+.filter(el => el.type === 'way' && el.geometry)
+.map(el => ({
+coords: el.geometry.map(g => [g.lat, g.lon]),
+maxAlt: possibleAlts[Math.floor(Math.random() * possibleAlts.length)]
+}));
 }
 
 function pointInPolygon(lat, lon, coords){
-  let inside = false;
-  for(let i=0, j=coords.length-1; i<coords.length; j=i++){
-    const [yi,xi] = coords[i], [yj,xj] = coords[j];
-    const intersect = ((yi>lat) !== (yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi);
-    if(intersect) inside = !inside;
-  }
-  return inside;
+let inside = false;
+for(let i=0, j=coords.length-1; i<coords.length; j=i++){
+const [yi,xi] = coords[i], [yj,xj] = coords[j];
+const intersect = ((yi>lat) !== (yj>lat)) && (lon < (xj-xi)*(lat-yi)/(yj-yi)+xi);
+if(intersect) inside = !inside;
+}
+return inside;
 }
 
 function isBlockedByBuilding(lat, lon, alt){
-  for(const b of buildings){
-    if(alt <= b.maxAlt && pointInPolygon(lat, lon, b.coords)) return true;
-  }
-  return false;
+for(const b of buildings){
+if(alt <= b.maxAlt && pointInPolygon(lat, lon, b.coords)) return true;
+}
+return false;
 }
 
 function isBlockedByAirspace(lat, lon, alt){
-  for(const z of AIRSPACE_ZONES){
-    if((z.alts.includes('all') || z.alts.includes(alt)) && haversineKm(lat,lon,z.lat,z.lon) <= z.radiusKm) return true;
-  }
-  return false;
+for(const z of AIRSPACE_ZONES){
+if((z.alts.includes('all') || z.alts.includes(alt)) && haversineKm(lat,lon,z.lat,z.lon) <= z.radiusKm) return true;
+}
+return false;
 }
 
 const nodeId = (r,c,alt)=>`${r}_${c}_${alt}`;
@@ -79,124 +82,123 @@ const blocked = new Set();
 const adj = {};
 
 function addEdge(a,b,dist,type){
-  if(blocked.has(a)||blocked.has(b)) return;
-  (adj[a]=adj[a]||[]).push({to:b, dist, edgeType:type});
-  (adj[b]=adj[b]||[]).push({to:a, dist, edgeType:type});
+if(blocked.has(a)||blocked.has(b)) return;
+(adj[a]=adj[a]||[]).push({to:b, dist, edgeType:type});
+(adj[b]=adj[b]||[]).push({to:a, dist, edgeType:type});
 }
 
 const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
 
 function buildGraph(){
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      const lat = latMin + r*stepLat, lon = lonMin + c*stepLon;
-      for(const alt of ALTS){
-        const id = nodeId(r,c,alt);
-        nodePos[id] = {lat,lon,alt,r,c};
-        if(isBlockedByAirspace(lat,lon,alt) || isBlockedByBuilding(lat,lon,alt)){
-          blocked.add(id);
-        }
-      }
-    }
-  }
-
-  for(let r=0;r<ROWS;r++){
-    for(let c=0;c<COLS;c++){
-      for(const alt of ALTS){
-        const id = nodeId(r,c,alt);
-        if(blocked.has(id)) continue;
-        for(const [dr,dc] of DIRS){
-          const nr=r+dr, nc=c+dc;
-          if(nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
-          if(nr>r || (nr===r && nc>c)){
-            const nid = nodeId(nr,nc,alt);
-            if(blocked.has(nid)) continue;
-            const d = haversineKm(nodePos[id].lat,nodePos[id].lon,nodePos[nid].lat,nodePos[nid].lon);
-            addEdge(id,nid,d,'h');
-          }
-        }
-        const altIdx = ALTS.indexOf(alt);
-        if(altIdx < ALTS.length-1){
-          const upId = nodeId(r,c,ALTS[altIdx+1]);
-          if(!blocked.has(upId)) addEdge(id, upId, CLIMB_COST, 'v');
-        }
-      }
-    }
-  }
+for(let r=0;r<ROWS;r++){
+for(let c=0;c<COLS;c++){
+const lat = latMin + r*stepLat, lon = lonMin + c*stepLon;
+for(const alt of ALTS){
+const id = nodeId(r,c,alt);
+nodePos[id] = {lat,lon,alt,r,c};
+if(isBlockedByAirspace(lat,lon,alt) || isBlockedByBuilding(lat,lon,alt)){
+blocked.add(id);
+}
+}
+}
+}
+for(let r=0;r<ROWS;r++){
+for(let c=0;c<COLS;c++){
+for(const alt of ALTS){
+const id = nodeId(r,c,alt);
+if(blocked.has(id)) continue;
+for(const [dr,dc] of DIRS){
+const nr=r+dr, nc=c+dc;
+if(nr<0||nr>=ROWS||nc<0||nc>=COLS) continue;
+if(nr>r || (nr===r && nc>c)){
+const nid = nodeId(nr,nc,alt);
+if(blocked.has(nid)) continue;
+const d = haversineKm(nodePos[id].lat,nodePos[id].lon,nodePos[nid].lat,nodePos[nid].lon);
+addEdge(id,nid,d,'h');
+}
+}
+const altIdx = ALTS.indexOf(alt);
+if(altIdx < ALTS.length-1){
+const upId = nodeId(r,c,ALTS[altIdx+1]);
+if(!blocked.has(upId)) addEdge(id, upId, CLIMB_COST, 'v');
+}
+}
+}
+}
 }
 
 // ---------- Algoritmo Dijkstra con Ponderación Energética ----------
 function computeWeight(edge, toAlt, batteryPref){
-  const factor = ENERGY_FACTOR[toAlt];
-  if(edge.edgeType === 'v') return edge.dist * (1 + batteryPref*2.0); 
-  const blend = 1 + batteryPref*(factor-1);
-  return edge.dist * blend;
+const factor = ENERGY_FACTOR[toAlt];
+if(edge.edgeType === 'v') return edge.dist * (1 + batteryPref*2.0);
+const blend = 1 + batteryPref*(factor-1);
+return edge.dist * blend;
 }
 
 function dijkstra(startId, endId, batteryPref){
-  const dist = {}, prev = {}, visited = new Set();
-  dist[startId] = 0;
-  let frontier = [{id:startId, d:0}];
-  let explored = 0;
-
-  while(frontier.length){
-    frontier.sort((a,b)=>a.d-b.d);
-    const {id:u} = frontier.shift();
-    if(visited.has(u)) continue;
-    visited.add(u); explored++;
-    if(u === endId) break;
-    for(const edge of (adj[u]||[])){
-      if(visited.has(edge.to)) continue;
-      const toAlt = nodePos[edge.to].alt;
-      const w = computeWeight(edge, toAlt, batteryPref);
-      const nd = dist[u] + w;
-      if(dist[edge.to] === undefined || nd < dist[edge.to]){
-        dist[edge.to] = nd;
-        prev[edge.to] = u;
-        frontier.push({id:edge.to, d:nd});
-      }
-    }
-  }
-
-  if(dist[endId] === undefined) return null;
-  const path = [];
-  let cur = endId;
-  while(cur !== undefined){ path.unshift(cur); cur = prev[cur]; }
-  return {path, cost:dist[endId], explored};
+const dist = {}, prev = {}, visited = new Set();
+dist[startId] = 0;
+let frontier = [{id:startId, d:0}];
+let explored = 0;
+while(frontier.length){
+frontier.sort((a,b)=>a.d-b.d);
+const {id:u} = frontier.shift();
+if(visited.has(u)) continue;
+visited.add(u); explored++;
+if(u === endId) break;
+for(const edge of (adj[u]||[])){
+if(visited.has(edge.to)) continue;
+const toAlt = nodePos[edge.to].alt;
+const w = computeWeight(edge, toAlt, batteryPref);
+const nd = dist[u] + w;
+if(dist[edge.to] === undefined || nd < dist[edge.to]){
+dist[edge.to] = nd;
+prev[edge.to] = u;
+frontier.push({id:edge.to, d:nd});
+}
+}
+}
+if(dist[endId] === undefined) return null;
+const path = [];
+let cur = endId;
+while(cur !== undefined){ path.unshift(cur); cur = prev[cur]; }
+return {path, cost:dist[endId], explored};
 }
 
 function nearestNode(lat, lon, alt){
-  let best=null, bestD=Infinity;
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const id = nodeId(r,c,alt);
-    if(blocked.has(id)) continue;
-    const d = haversineKm(lat,lon,nodePos[id].lat,nodePos[id].lon);
-    if(d<bestD){bestD=d; best=id;}
-  }
-  return best;
+let best=null, bestD=Infinity;
+for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+const id = nodeId(r,c,alt);
+if(blocked.has(id)) continue;
+const d = haversineKm(lat,lon,nodePos[id].lat,nodePos[id].lon);
+if(d<bestD){bestD=d; best=id;}
+}
+return best;
 }
 
 // ---------- Visualización y Animación de Patrullaje ----------
 const layers = {buildings:L.layerGroup().addTo(map), grid:L.layerGroup().addTo(map), zones:L.layerGroup().addTo(map), route:L.layerGroup().addTo(map), points:L.layerGroup().addTo(map)};
-const layerColor = {50:'#453ddc', 100:'#7c088e', 150:'#e6543a'};
+const layerColor = {50:'#453ddc', 75:'#3d9adc', 100:'#7c088e', 125:'#c9088e', 150:'#e6543a'};
 
 function drawZones(){
-  for(const z of AIRSPACE_ZONES){
-    L.circle([z.lat,z.lon], {radius:z.radiusKm*1000, color:'#e6743a', fillColor:'#e6743a', fillOpacity:0.2, weight:1.5}).addTo(layers.zones);
-  }
+for(const z of AIRSPACE_ZONES){
+L.circle([z.lat,z.lon], {radius:z.radiusKm*1000, color:'#e6743a', fillColor:'#e6743a', fillOpacity:0.2, weight:1.5}).addTo(layers.zones);
 }
+}
+
 function drawBuildings(){
-  for(const b of buildings){
-    let col = b.maxAlt === 150 ? '#e6543a' : (b.maxAlt === 100 ? '#7c088e' : '#c98b52');
-    L.polygon(b.coords, {color:col, weight:1, fillColor:col, fillOpacity:0.4}).addTo(layers.buildings);
-  }
+for(const b of buildings){
+let col = b.maxAlt === 150 ? '#e6543a' : (b.maxAlt === 100 ? '#7c088e' : '#c98b52');
+L.polygon(b.coords, {color:col, weight:1, fillColor:col, fillOpacity:0.4}).addTo(layers.buildings);
 }
+}
+
 function drawGrid(){
-  for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
-    const id = nodeId(r,c,50);
-    const p = nodePos[id];
-    L.circleMarker([p.lat,p.lon], {radius:1.5, color: blocked.has(id)?'#e6543a':'#448855', weight:1, fillOpacity:0.4}).addTo(layers.grid);
-  }
+for(let r=0;r<ROWS;r++) for(let c=0;c<COLS;c++){
+const id = nodeId(r,c,50);
+const p = nodePos[id];
+L.circleMarker([p.lat,p.lon], {radius:1.2, color: blocked.has(id)?'#e6543a':'#448855', weight:1, fillOpacity:0.4}).addTo(layers.grid);
+}
 }
 
 let originPt=null, destPt=null, currentResult=null;
@@ -205,118 +207,107 @@ const msg = document.getElementById('msg');
 let graphReady = false;
 
 async function init(){
-  msg.textContent = 'Cargando infraestructura urbana de Loja (OpenStreetMap)…';
-  try{
-    buildings = await fetchBuildings();
-  } catch(err){
-    buildings = [];
-    msg.textContent = 'Aviso: No se pudo conectar con Overpass. Usando solo zonas restringidas.';
-  }
-  buildGraph();
-  drawZones();
-  drawBuildings();
-  drawGrid();
-  graphReady = true;
-  msg.textContent = `Listo. Edificios cargados: ${buildings.length}. Haz clic en el mapa para el Origen.`;
+msg.textContent = 'Cargando infraestructura urbana de Loja (OpenStreetMap)…';
+try{
+buildings = await fetchBuildings();
+} catch(err){
+buildings = [];
+msg.textContent = 'Aviso: No se pudo conectar con Overpass. Usando solo zonas restringidas.';
+}
+buildGraph();
+drawZones();
+drawBuildings();
+drawGrid();
+graphReady = true;
+msg.textContent = `Listo. Edificios cargados: ${buildings.length}. Nodos del grafo: ${ROWS*COLS*ALTS.length}. Haz clic en el mapa para el Origen.`;
 }
 init();
 
 map.on('click', e=>{
-  if(!graphReady) return;
-  if(!originPt){
-    originPt = e.latlng;
-    layers.points.clearLayers();
-    L.marker(originPt).addTo(layers.points).bindTooltip('Origen Dron', {permanent:true}).openTooltip();
-    msg.textContent = 'Ahora haz clic para definir el Destino.';
-  } else if(!destPt){
-    destPt = e.latlng;
-    L.marker(destPt).addTo(layers.points).bindTooltip('Destino Dron', {permanent:true}).openTooltip();
-    runRoute();
-  }
+if(!graphReady) return;
+if(!originPt){
+originPt = e.latlng;
+layers.points.clearLayers();
+L.marker(originPt).addTo(layers.points).bindTooltip('Origen Dron', {permanent:true}).openTooltip();
+msg.textContent = 'Ahora haz clic para definir el Destino.';
+} else if(!destPt){
+destPt = e.latlng;
+L.marker(destPt).addTo(layers.points).bindTooltip('Destino Dron', {permanent:true}).openTooltip();
+runRoute();
+}
 });
 
 document.getElementById('resetBtn').onclick = ()=>{
-  originPt=null; destPt=null; currentResult=null;
-  layers.points.clearLayers(); layers.route.clearLayers();
-  if(droneMarker) map.removeLayer(droneMarker);
-  document.getElementById('stats').style.display='none';
-  msg.textContent = 'Puntos reiniciados. Haz clic para elegir nuevo origen.';
+originPt=null; destPt=null; currentResult=null;
+layers.points.clearLayers(); layers.route.clearLayers();
+if(droneMarker) map.removeLayer(droneMarker);
+document.getElementById('stats').style.display='none';
+msg.textContent = 'Puntos reiniciados. Haz clic para elegir nuevo origen.';
 };
 
 document.getElementById('weightSlider').oninput = ()=>{ if(originPt && destPt) runRoute(); };
 
 function runRoute(){
-  layers.route.clearLayers();
-  if(droneMarker) map.removeLayer(droneMarker);
-
-  const batteryPref = document.getElementById('weightSlider').value/100;
-  const startId = nearestNode(originPt.lat, originPt.lng, 50);
-  const endId = nearestNode(destPt.lat, destPt.lng, 50);
-
-  currentResult = dijkstra(startId, endId, batteryPref);
-  if(!currentResult){
-    msg.textContent = 'Ruta imposible: Zonas restringidas o edificios bloquean el paso.';
-    document.getElementById('stats').style.display='none';
-    return;
-  }
-
-  const coords = [originPt, ...currentResult.path.map(id=>L.latLng(nodePos[id].lat, nodePos[id].lon)), destPt];
-  let totalDist = 0, climbs = 0;
-  
-  for(let i=0;i<coords.length-1;i++){
-    let color = '#3ddc84';
-    if(i>0 && i<currentResult.path.length){
-      const alt = nodePos[currentResult.path[i]].alt;
-      color = layerColor[alt];
-    }
-    L.polyline([coords[i],coords[i+1]], {color, weight:4, opacity:0.85}).addTo(layers.route);
-    totalDist += haversineKm(coords[i].lat,coords[i].lng,coords[i+1].lat,coords[i+1].lng);
-  }
-  
-  for(let i=1;i<currentResult.path.length;i++){
-    if(nodePos[currentResult.path[i]].alt !== nodePos[currentResult.path[i-1]].alt) climbs++;
-  }
-
-  const batteryUsed = Math.min(100, (currentResult.cost * 18).toFixed(1));
-
-  document.getElementById('statDist').textContent = totalDist.toFixed(2)+' km';
-  document.getElementById('statClimb').textContent = climbs;
-  document.getElementById('statBattery').textContent = batteryUsed + ' %';
-  document.getElementById('statCost').textContent = currentResult.cost.toFixed(3);
-  document.getElementById('statNodes').textContent = currentResult.explored;
-  document.getElementById('stats').style.display = 'block';
-  msg.textContent = 'Ruta calculada con éxito. Presiona reproducir animación.';
+layers.route.clearLayers();
+if(droneMarker) map.removeLayer(droneMarker);
+const batteryPref = document.getElementById('weightSlider').value/100;
+const startId = nearestNode(originPt.lat, originPt.lng, 50);
+const endId = nearestNode(destPt.lat, destPt.lng, 50);
+currentResult = dijkstra(startId, endId, batteryPref);
+if(!currentResult){
+msg.textContent = 'Ruta imposible: Zonas restringidas o edificios bloquean el paso.';
+document.getElementById('stats').style.display='none';
+return;
+}
+const coords = [originPt, ...currentResult.path.map(id=>L.latLng(nodePos[id].lat, nodePos[id].lon)), destPt];
+let totalDist = 0, climbs = 0;
+for(let i=0;i<coords.length-1;i++){
+let color = '#3ddc84';
+if(i>0 && i<currentResult.path.length){
+const alt = nodePos[currentResult.path[i]].alt;
+color = layerColor[alt];
+}
+L.polyline([coords[i],coords[i+1]], {color, weight:4, opacity:0.85}).addTo(layers.route);
+totalDist += haversineKm(coords[i].lat,coords[i].lng,coords[i+1].lat,coords[i+1].lng);
+}
+for(let i=1;i<currentResult.path.length;i++){
+if(nodePos[currentResult.path[i]].alt !== nodePos[currentResult.path[i-1]].alt) climbs++;
+}
+const batteryUsed = Math.min(100, (currentResult.cost * 18).toFixed(1));
+document.getElementById('statDist').textContent = totalDist.toFixed(2)+' km';
+document.getElementById('statClimb').textContent = climbs;
+document.getElementById('statBattery').textContent = batteryUsed + ' %';
+document.getElementById('statCost').textContent = currentResult.cost.toFixed(3);
+document.getElementById('statNodes').textContent = currentResult.explored;
+document.getElementById('stats').style.display = 'block';
+msg.textContent = 'Ruta calculada con éxito. Presiona reproducir animación.';
 }
 
 // ---------- Animación de Patrullaje del Dron ----------
 document.getElementById('animateBtn').onclick = ()=>{
-  if(!currentResult || !currentResult.path.length) {
-    msg.textContent = 'Primero calcula una ruta válida.';
-    return;
-  }
-  if(droneMarker) map.removeLayer(droneMarker);
-
-  const pathNodes = [originPt, ...currentResult.path.map(id => L.latLng(nodePos[id].lat, nodePos[id].lon)), destPt];
-  let stepIndex = 0;
-
-  droneMarker = L.marker(pathNodes[0], {
-    icon: L.divIcon({
-      className: 'drone-icon',
-      html: '<div style="background:#81e5e5;width:14px;height:14px;border-radius:50%;border:2px solid #000;box-shadow:0 0 8px #81e5e5;"></div>',
-      iconSize: [14, 14]
-    })
-  }).addTo(map);
-
-  msg.textContent = 'Simulando vuelo de patrullaje del dron...';
-
-  function moveDrone(){
-    if(stepIndex < pathNodes.length){
-      droneMarker.setLatLng(pathNodes[stepIndex]);
-      stepIndex++;
-      setTimeout(moveDrone, 350);
-    } else {
-      msg.textContent = '¡El dron ha llegado a su destino!';
-    }
-  }
-  moveDrone();
+if(!currentResult || !currentResult.path.length) {
+msg.textContent = 'Primero calcula una ruta válida.';
+return;
+}
+if(droneMarker) map.removeLayer(droneMarker);
+const pathNodes = [originPt, ...currentResult.path.map(id => L.latLng(nodePos[id].lat, nodePos[id].lon)), destPt];
+let stepIndex = 0;
+droneMarker = L.marker(pathNodes[0], {
+icon: L.divIcon({
+className: 'drone-icon',
+html: '<div style="background:#81e5e5;width:14px;height:14px;border-radius:50%;border:2px solid #000;box-shadow:0 0 8px #81e5e5;"></div>',
+iconSize: [14, 14]
+})
+}).addTo(map);
+msg.textContent = 'Simulando vuelo de patrullaje del dron...';
+function moveDrone(){
+if(stepIndex < pathNodes.length){
+droneMarker.setLatLng(pathNodes[stepIndex]);
+stepIndex++;
+setTimeout(moveDrone, 350);
+} else {
+msg.textContent = '¡El dron ha llegado a su destino!';
+}
+}
+moveDrone();
 };
