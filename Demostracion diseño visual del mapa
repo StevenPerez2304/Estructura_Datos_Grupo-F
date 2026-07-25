@@ -1,0 +1,27 @@
+:root{
+  --bg:#141212; --panel:#4c1f5fb1; --line:#f8f8f8; --line-strong:#0d5678;
+  --text:#d7d1d1; --text-mut:#dfdfdf; --accent:#81e5e5; --accent-dim:#ffffff;
+  --warn:#e6743a; --layer50:#453ddc; --layer100:#7c088e; --layer150:#e6543a;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
+#app{display:grid;grid-template-columns:340px 1fr;height:100vh;}
+#panel{background:var(--panel);border-right:1px solid var(--line);padding:20px;overflow-y:auto;}
+#map{height:100%;}
+h1{font-size:16px;font-weight:600;margin:0 0 4px;letter-spacing:.2px;}
+.sub{font-size:12px;color:var(--text-mut);margin-bottom:18px;line-height:1.5;}
+.section{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;}
+.section h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mut);margin:0 0 10px;font-weight:600;}
+.step{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:6px;}
+.badge{display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:11px;text-align:center;line-height:18px;margin-right:6px;}
+.row{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:12px;color:var(--text-mut);}
+input[type=range]{width:100%;accent-color:var(--accent);}
+.stat{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);}
+.stat b{color:var(--text);font-weight:600;}
+#stats{display:none;}
+.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mut);margin:4px 0;}
+.swatch{width:22px;height:3px;border-radius:2px;}
+button{width:100%;background:var(--line-strong);color:var(--text);border:none;padding:10px;border-radius:6px;font-size:13px;cursor:pointer;margin-top:6px;}
+button:hover{background:var(--accent-dim);}
+#msg{font-size:12px;color:var(--accent);min-height:16px;margin-top:8px;}
+.leaflet-container{background:#0f1512;}
