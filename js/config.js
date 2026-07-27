@@ -53,10 +53,6 @@ const AIRSPACE_ZONES = [
 //   naranja  -> 100 m
 //   amarilla -> 60 m
 //
-// AVISO: estas 12 zonas son una aproximación hecha a partir de una captura
-// de pantalla estática (no se puede saber el zoom/paneo exacto que tenías
-// en ese momento), así que su posición es relativa, no exacta. Para
-// ajustarlas a los edificios reales que quieres marcar:
 //   1) Abre index.html, mantén presionada la tecla Shift y haz clic sobre
 //      las esquinas del edificio que te interesa marcar.
 //   2) El mensaje del panel (y la consola del navegador, F12) mostrarán
