@@ -10,7 +10,7 @@
 // ==============================================
 
 let originPt = null, destPt = null;
-let lastRouteCoords = null, lastRouteCost = 0;
+let lastRouteCoords = null, lastRouteCost = 0, lastRouteSpeed = DRONE_SPEED_MAX;
 const msg = document.getElementById('msg');
 let graphReady = false;
 
@@ -58,7 +58,7 @@ document.getElementById('resetBtn').onclick = ()=>{
   stopDroneAnimation();
   clearDroneVisuals();
   originPt=null; destPt=null;
-  lastRouteCoords=null; lastRouteCost=0;
+  lastRouteCoords=null; lastRouteCost=0; lastRouteSpeed=DRONE_SPEED_MAX;
   layers.points.clearLayers(); layers.route.clearLayers();
   document.getElementById('stats').style.display='none';
   msg.textContent = 'Puntos reiniciados. Haz clic para elegir un origen.';
@@ -72,7 +72,7 @@ document.getElementById('weightSlider').oninput = ()=>{ if(originPt && destPt) r
 document.getElementById('animateBtn').onclick = ()=>{
   if(animationActive) return;
   if(!lastRouteCoords){ msg.textContent = 'Primero calcula una ruta.'; return; }
-  startDroneAnimation(lastRouteCoords, lastRouteCost);
+  startDroneAnimation(lastRouteCoords, lastRouteCost, lastRouteSpeed);
 };
 
 function runRoute(){
@@ -117,20 +117,27 @@ function runRoute(){
   }
   document.getElementById('statProfile').textContent = profile.map(a=>a+'m').join(' → ');
 
+  // Velocidad de crucero según la preferencia: más corta/directa -> más
+  // rápida (más demanda de batería); ahorro de batería -> más lenta (menos
+  // demanda). Antes era una constante fija sin relación con el slider.
+  const speed = droneSpeedForPref(batteryPref);
+
   document.getElementById('statDist').textContent = totalDist.toFixed(2)+' km';
   document.getElementById('statClimb').textContent = climbs;
   document.getElementById('statCost').textContent = result.cost.toFixed(3);
   document.getElementById('statNodes').textContent = result.explored;
   document.getElementById('statBattery').textContent = '100 %';
+  document.getElementById('statSpeed').textContent = speed.toFixed(0)+' m/s';
   document.getElementById('stats').style.display = 'block';
   msg.textContent = 'Ruta calculada. Presiona "Animar recorrido" o ajusta la preferencia para recalcular.';
 
   lastRouteCoords = coords;
+  lastRouteSpeed = speed;
   // OJO: para la animación/batería usamos el consumo REAL de la ruta
   // (pathRealBatteryCost), no result.cost. result.cost es el puntaje de
   // OPTIMIZACIÓN usado internamente por Dijkstra para comparar aristas
   // según el slider, y su magnitud no es un "% de batería" comparable
-  // entre preferencias distintas (por eso "ahorro de batería" podía
-  // mostrar un % de consumo mayor que "ruta más corta").
-  lastRouteCost = pathRealBatteryCost(result.path);
+  // entre preferencias distintas. pathRealBatteryCost ya incluye el efecto
+  // de la velocidad (más rápido = más batería, más lento = menos batería).
+  lastRouteCost = pathRealBatteryCost(result.path, batteryPref);
 }

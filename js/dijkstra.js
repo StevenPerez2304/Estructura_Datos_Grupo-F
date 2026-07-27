@@ -55,14 +55,17 @@ function computeRealWeight(fromId, edge){
   return edge.dist * factor * wind;
 }
 
-function pathRealBatteryCost(path){
+function pathRealBatteryCost(path, batteryPref){
   let total = 0;
   for(let i=1;i<path.length;i++){
     const fromId = path[i-1], toId = path[i];
     const edge = (adj[fromId]||[]).find(e=>e.to===toId);
     if(edge) total += computeRealWeight(fromId, edge);
   }
-  return total;
+  // Ruta más corta = vuelo directo y rápido = más demanda de batería.
+  // Ahorro de batería = vuelo lento y económico = menos demanda.
+  // (ver speedEnergyFactor en config.js)
+  return total * speedEnergyFactor(batteryPref);
 }
 
 function dijkstra(startId, endId, batteryPref){

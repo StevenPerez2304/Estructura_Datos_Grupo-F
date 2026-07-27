@@ -21,7 +21,7 @@ function stopDroneAnimation(){
   if(animationRAF){ cancelAnimationFrame(animationRAF); animationRAF = null; }
 }
 
-function startDroneAnimation(pathCoords, routeCost){
+function startDroneAnimation(pathCoords, routeCost, cruiseSpeedMps){
   stopDroneAnimation();
   clearDroneVisuals();
   if(!pathCoords || pathCoords.length < 2) return;
@@ -38,8 +38,11 @@ function startDroneAnimation(pathCoords, routeCost){
   }
   if(totalLength <= 0) totalLength = 0.001;
 
-  const DRONE_SPEED_MPS = 60; // velocidad de crucero constante
-  const durationMs = (totalLength / DRONE_SPEED_MPS) * 1000;
+  // Velocidad de crucero de ESTA ruta (varía según el slider: más corta y
+  // directa -> más rápida; ahorro de batería -> más lenta). Antes era una
+  // constante fija (60 m/s) sin relación con la preferencia elegida.
+  const speedMps = cruiseSpeedMps || DRONE_SPEED_MAX;
+  const durationMs = (totalLength / speedMps) * 1000;
   const estimatedBatteryUse = Math.min(95, routeCost * 14); // % aproximado, solo para la barra visual
 
   droneTrail = L.polyline([pathCoords[0]], {color:'#81e5e5', weight:3, opacity:0.75}).addTo(layers.route);

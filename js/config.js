@@ -28,6 +28,36 @@ const ENERGY_FACTOR = {50:1.00, 75:1.12, 100:1.25, 125:1.40, 150:1.55};
 // condiciones con "rodear" y el algoritmo elija de verdad la mejor opción.
 const CLIMB_COST = 0.03; // costo fijo (km equivalentes) por subir o bajar un nivel de altitud
 
+// ------------------------------------------------------------------
+// VELOCIDAD DE CRUCERO SEGÚN LA PREFERENCIA
+// ------------------------------------------------------------------
+// Antes la velocidad del dron era una constante fija (60 m/s) sin importar
+// el slider de batería. Pero la lógica real del proyecto es:
+//   - Ruta más corta (batteryPref=0)   -> vuelo directo y RÁPIDO -> más demanda de batería
+//   - Ahorro de batería (batteryPref=1) -> vuelo más LENTO y económico -> menos demanda
+// DRONE_SPEED_MAX es la velocidad de crucero cuando se prioriza llegar rápido
+// (rutas más directas); DRONE_SPEED_MIN es la velocidad "económica" cuando se
+// prioriza el ahorro. DRONE_SPEED_MAX coincide con el valor histórico (60 m/s)
+// para no romper la referencia de consumo ya calibrada en ENERGY_FACTOR/CLIMB_COST.
+const DRONE_SPEED_MAX = 60; // m/s, batteryPref=0 (más corta / más rápida)
+const DRONE_SPEED_MIN = 35; // m/s, batteryPref=1 (ahorro de batería / más lenta)
+
+function droneSpeedForPref(batteryPref){
+  return DRONE_SPEED_MAX - batteryPref*(DRONE_SPEED_MAX - DRONE_SPEED_MIN);
+}
+
+// Consumo de energía en función de la velocidad: volar más rápido exige más
+// potencia para vencer la resistencia del aire (en física real, potencia ∝
+// velocidad³, y tiempo de vuelo ∝ distancia/velocidad, así que energía para
+// una misma distancia ∝ velocidad²). Se normaliza contra DRONE_SPEED_MAX para
+// que a batteryPref=0 el factor sea 1 (no cambia el consumo ya calibrado), y
+// a batteryPref=1 el factor sea (35/60)² ≈ 0.34 -> vuelo lento y notablemente
+// más económico, tal como se espera del modo "ahorro de batería".
+function speedEnergyFactor(batteryPref){
+  const speed = droneSpeedForPref(batteryPref);
+  return (speed / DRONE_SPEED_MAX) ** 2;
+}
+
 // Viento predominante (sopla de oeste a este). Sin esto, una ruta que nunca
 // cambia de altitud pesa EXACTAMENTE igual sin importar la preferencia del
 // slider (porque el factor de energía es el mismo para toda la ruta). Con
