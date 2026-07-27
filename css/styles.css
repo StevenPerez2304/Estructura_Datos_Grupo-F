@@ -1,30 +1,279 @@
 :root{
-  --bg:#141212; --panel:#4c1f5fb1; --line:#f8f8f8; --line-strong:#0d5678;
-  --text:#d7d1d1; --text-mut:#dfdfdf; --accent:#81e5e5; --accent-dim:#ffffff;
-  --warn:#e6743a;
-  /* Colores por capa de altitud — deben coincidir con layerColor en config.js */
-  --layer50:#453ddc; --layer75:#3d9adc; --layer100:#7c088e; --layer125:#c9088e; --layer150:#e6543a;
+  /* Fondo */
+  --bg:#07111b;
+  --panel:rgba(8,20,35,.92);
+  /* Colores principales */
+  --primary:#00e5ff;
+  --primary-soft:#4ef3ff;
+  --secondary:#3cff8f;
+  --danger:#ff5d5d;
+  --warning:#ffb347;
+  /* Texto */
+  --text:#eefcff;
+  --text-muted:#8db4c8;
+  /* Bordes */
+  --line:rgba(0,229,255,.15);
+  --line-strong:#00d8ff;
+  /* Capas de vuelo */
+  --layer50:#00b4ff;
+  --layer75:#00ffd5;
+  --layer100:#8b5cf6;
+  --layer125:#ff4fd8;
+  --layer150:#ff6b35;
 }
-*{box-sizing:border-box;}
-body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text);}
-#app{display:grid;grid-template-columns:340px 1fr;height:100vh;}
-#panel{background:var(--panel);border-right:1px solid var(--line);padding:20px;overflow-y:auto;}
-#map{height:100%;}
-h1{font-size:16px;font-weight:600;margin:0 0 4px;letter-spacing:.2px;}
-.sub{font-size:12px;color:var(--text-mut);margin-bottom:18px;line-height:1.5;}
-.section{border-top:1px solid var(--line);padding-top:14px;margin-top:14px;}
-.section h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--text-mut);margin:0 0 10px;font-weight:600;}
-.step{font-size:13px;line-height:1.6;color:var(--text);margin-bottom:6px;}
-.badge{display:inline-block;width:18px;height:18px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:11px;text-align:center;line-height:18px;margin-right:6px;}
-.row{display:flex;justify-content:space-between;align-items:center;margin:8px 0;font-size:12px;color:var(--text-mut);}
-input[type=range]{width:100%;accent-color:var(--accent);}
-.stat{display:flex;justify-content:space-between;font-size:13px;padding:6px 0;border-bottom:1px dashed var(--line);}
-.stat b{color:var(--text);font-weight:600;}
-#stats{display:none;}
-.legend-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-mut);margin:4px 0;}
-.swatch{width:22px;height:3px;border-radius:2px;flex:0 0 auto;}
-.swatch.block{height:12px;border-radius:3px;}
-button{width:100%;background:var(--line-strong);color:var(--text);border:none;padding:10px;border-radius:6px;font-size:13px;cursor:pointer;margin-top:6px;}
-button:hover{background:var(--accent-dim);}
-#msg{font-size:12px;color:var(--accent);min-height:16px;margin-top:8px;}
-.leaflet-container{background:#0f1512;}
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:"Segoe UI",sans-serif;
+    background:
+        radial-gradient(circle at top,#0d2238 0%,#07111b 50%,#03070d 100%);
+    color:var(--text);
+    overflow:hidden;
+}
+
+#app{
+    display:grid;
+    grid-template-columns:360px 1fr;
+    height:100vh;
+}
+
+/* ==========================
+        PANEL
+========================== */
+#panel{
+    background:var(--panel);
+    backdrop-filter:blur(18px);
+    border-right:1px solid rgba(0,229,255,.25);
+    padding:22px;
+    overflow-y:auto;
+    box-shadow:
+        inset -1px 0 0 rgba(255,255,255,.04),
+        0 0 35px rgba(0,229,255,.08);
+}
+
+#panel::-webkit-scrollbar{
+    width:6px;
+}
+
+#panel::-webkit-scrollbar-thumb{
+    background:var(--primary);
+    border-radius:20px;
+}
+
+h1{
+    font-size:22px;
+    color:var(--primary);
+    letter-spacing:1px;
+    margin-bottom:8px;
+    text-shadow:0 0 15px rgba(0,229,255,.6);
+}
+
+.sub{
+    color:var(--text-muted);
+    font-size:13px;
+    line-height:1.6;
+    margin-bottom:20px;
+}
+
+/* ==========================
+        SECCIONES
+========================== */
+
+.section{
+    margin-top:18px;
+    padding:15px;
+    border:1px solid rgba(0,229,255,.12);
+    border-radius:14px;
+    background:rgba(255,255,255,.03);
+    box-shadow:0 0 20px rgba(0,229,255,.05);
+}
+
+.section h2{
+    color:var(--secondary);
+    font-size:12px;
+    letter-spacing:2px;
+    margin-bottom:12px;
+}
+
+.step{
+    margin:10px 0;
+    font-size:13px;
+    line-height:1.6;
+}
+
+/* ==========================
+        BADGES
+========================== */
+.badge{
+    display:inline-flex;
+    justify-content:center;
+    align-items:center;
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    background:linear-gradient(
+        135deg,
+        var(--primary),
+        #005eff
+    );
+    color:white;
+    font-weight:bold;
+    margin-right:8px;
+    box-shadow:
+        0 0 12px rgba(0,229,255,.8);
+}
+
+/* ==========================
+        FILAS
+========================== */
+.row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin:12px 0;
+    color:var(--text-muted);
+    font-size:13px;
+}
+
+/* ==========================
+        SLIDER
+========================== */
+input[type=range]{
+    width:100%;
+    accent-color:var(--primary);
+}
+
+/* ==========================
+        BOTONES
+========================== */
+button{
+    width:100%;
+    margin-top:10px;
+    padding:14px;
+    border:none;
+    border-radius:12px;
+    cursor:pointer;
+    font-weight:700;
+    font-size:14px;
+    color:white;
+    background:
+        linear-gradient(
+            90deg,
+            #009dff,
+            #00e5ff
+        );
+    transition:.25s;
+}
+
+button:hover{
+    transform:translateY(-2px);
+    box-shadow:
+        0 0 20px rgba(0,229,255,.65);
+}
+
+button:active{
+    transform:scale(.98);
+}
+
+/* ==========================
+        STATS
+========================== */
+#stats{
+    display:none;
+    margin-top:15px;
+}
+
+.stat{
+    display:flex;
+    justify-content:space-between;
+    padding:10px;
+    margin:6px 0;
+    border-radius:10px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(0,229,255,.08);
+}
+
+.stat b{
+    color:var(--primary);
+}
+
+/* ==========================
+        LEYENDA
+========================== */
+
+.legend-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin:8px 0;
+    color:var(--text-muted);
+}
+
+.swatch{
+    width:30px;
+    height:5px;
+    border-radius:8px;
+    box-shadow:0 0 10px currentColor;
+}
+
+.swatch.block{
+    width:18px;
+    height:18px;
+    border-radius:4px;
+}
+
+/* ==========================
+        MENSAJES
+========================== */
+#msg{
+    margin-top:12px;
+    color:var(--secondary);
+    font-weight:600;
+    text-shadow:0 0 8px rgba(60,255,143,.5);
+}
+
+/* ==========================
+        MAPA
+========================== */
+#map{
+    height:100%;
+}
+
+.leaflet-container{
+    background:#06121d;
+}
+
+/* ==========================
+        TARJETAS CON EFECTO
+========================== */
+.section:hover{
+    border-color:rgba(0,229,255,.4);
+    box-shadow:
+        0 0 25px rgba(0,229,255,.18);
+}
+
+/* ==========================
+        TITULO ANIMADO
+========================== */
+@keyframes glow{
+    0%{
+        text-shadow:0 0 8px #00e5ff;
+    }
+    50%{
+        text-shadow:
+            0 0 18px #00e5ff,
+            0 0 30px #00e5ff;
+    }
+    100%{
+        text-shadow:0 0 8px #00e5ff;
+    }
+}
+
+h1{
+    animation:glow 3s infinite;
+}
