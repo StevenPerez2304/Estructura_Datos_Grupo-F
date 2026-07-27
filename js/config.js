@@ -18,7 +18,15 @@ const stepLat = SPAN_LAT/(ROWS-1), stepLon = SPAN_LON/(COLS-1);
 
 // Modelo de consumo de batería por capa (volar más alto = más viento/energía)
 const ENERGY_FACTOR = {50:1.00, 75:1.12, 100:1.25, 125:1.40, 150:1.55};
-const CLIMB_COST = 0.08; // costo fijo (km equivalentes) por subir o bajar un nivel de altitud
+// Antes: 0.08 (equivalente a 80 m), pero el desnivel REAL entre capas es de
+// solo 25 m (ver ALTS arriba: 50->75->100->125->150). Ese valor inflado
+// penalizaba subir/bajar de capa ~3.2x más de lo físicamente correcto, y
+// por eso Dijkstra terminaba SIEMPRE rodeando los edificios en vez de
+// sobrevolarlos, incluso cuando volar por encima era la ruta más corta.
+// Se corrige a 0.03 (25 m reales + un pequeño extra por la maniobra de
+// ascenso/descenso), para que "subir de capa" compita en igualdad de
+// condiciones con "rodear" y el algoritmo elija de verdad la mejor opción.
+const CLIMB_COST = 0.03; // costo fijo (km equivalentes) por subir o bajar un nivel de altitud
 
 // Viento predominante (sopla de oeste a este). Sin esto, una ruta que nunca
 // cambia de altitud pesa EXACTAMENTE igual sin importar la preferencia del

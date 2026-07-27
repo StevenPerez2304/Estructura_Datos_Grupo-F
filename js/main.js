@@ -126,5 +126,11 @@ function runRoute(){
   msg.textContent = 'Ruta calculada. Presiona "Animar recorrido" o ajusta la preferencia para recalcular.';
 
   lastRouteCoords = coords;
-  lastRouteCost = result.cost;
+  // OJO: para la animación/batería usamos el consumo REAL de la ruta
+  // (pathRealBatteryCost), no result.cost. result.cost es el puntaje de
+  // OPTIMIZACIÓN usado internamente por Dijkstra para comparar aristas
+  // según el slider, y su magnitud no es un "% de batería" comparable
+  // entre preferencias distintas (por eso "ahorro de batería" podía
+  // mostrar un % de consumo mayor que "ruta más corta").
+  lastRouteCost = pathRealBatteryCost(result.path);
 }

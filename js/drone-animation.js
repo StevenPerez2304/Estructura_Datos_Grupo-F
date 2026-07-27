@@ -38,7 +38,7 @@ function startDroneAnimation(pathCoords, routeCost){
   }
   if(totalLength <= 0) totalLength = 0.001;
 
-  const DRONE_SPEED_MPS = 12; // velocidad de crucero constante
+  const DRONE_SPEED_MPS = 60; // velocidad de crucero constante
   const durationMs = (totalLength / DRONE_SPEED_MPS) * 1000;
   const estimatedBatteryUse = Math.min(95, routeCost * 14); // % aproximado, solo para la barra visual
 

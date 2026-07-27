@@ -31,6 +31,40 @@ function computeWeight(fromId, edge, batteryPref){
   return edge.dist * altBlend * wind;
 }
 
+// ------------------------------------------------------------------
+// CONSUMO REAL DE BATERÍA (para la animación / estadística mostrada)
+// ------------------------------------------------------------------
+// computeWeight() de arriba NO sirve para esto: es un costo de
+// OPTIMIZACIÓN que se escala con batteryPref, así que su magnitud
+// cambia de significado según la preferencia (a veces sube, a veces
+// baja, según el viento del tramo). Usar ese número directo como "%
+// de batería" es lo que causaba el error reportado: con "ahorro de
+// batería" (batteryPref=1) el número podía salir MÁS alto que con
+// "ruta más corta" (batteryPref=0), aunque la ruta elegida en modo
+// ahorro consuma realmente menos energía.
+//
+// Aquí se calcula el consumo FÍSICO real de la ruta ya elegida, con
+// el factor de energía y el viento aplicados al 100% (sin escalarlos
+// por batteryPref), para que sea un número comparable entre rutas sin
+// importar qué preferencia se usó para encontrarlas.
+function computeRealWeight(fromId, edge){
+  const toAlt = nodePos[edge.to].alt;
+  if(edge.edgeType === 'v') return edge.dist; // costo físico de subir/bajar, sin escalar
+  const factor = ENERGY_FACTOR[toAlt];
+  const wind = windFactor(nodePos[fromId], nodePos[edge.to], 1); // viento al 100%, siempre real
+  return edge.dist * factor * wind;
+}
+
+function pathRealBatteryCost(path){
+  let total = 0;
+  for(let i=1;i<path.length;i++){
+    const fromId = path[i-1], toId = path[i];
+    const edge = (adj[fromId]||[]).find(e=>e.to===toId);
+    if(edge) total += computeRealWeight(fromId, edge);
+  }
+  return total;
+}
+
 function dijkstra(startId, endId, batteryPref){
   const dist = {}, prev = {}, visited = new Set();
   dist[startId] = 0;
