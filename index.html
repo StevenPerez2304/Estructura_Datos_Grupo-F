@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Planificador de rutas para drones — Dijkstra 3D</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<link rel="stylesheet" href="css/styles.css"/>
+</head>
+<body>
+<div id="app">
+  <div id="panel">
+    <h1>Ruteo de drones — Dijkstra 3D</h1>
+    <div class="sub">Grafo de espacio aéreo en 5 capas de altitud sobre Loja, Ecuador, con edificios reales de OpenStreetMap (altura asignada aleatoriamente con fines académicos), zonas restringidas y costo por consumo de batería.</div>
+
+    <div class="section">
+      <h2>Cómo usar</h2>
+      <div class="step"><span class="badge">1</span>Espera a que carguen los edificios (OpenStreetMap)</div>
+      <div class="step"><span class="badge">2</span>Clic en el mapa = punto de origen</div>
+      <div class="step"><span class="badge">3</span>Segundo clic = destino (calcula la ruta)</div>
+      <div class="step"><span class="badge">4</span>Ajusta la preferencia y recalcula</div>
+      <div class="step"><span class="badge">5</span>Presiona "Animar recorrido" para simular el vuelo</div>
+      <button id="resetBtn">Reiniciar puntos</button>
+      <button id="animateBtn">Animar recorrido</button>
+      <div id="msg"></div>
+    </div>
+
+    <div class="section">
+      <h2>Preferencia de ruta</h2>
+      <div class="row"><span>Más corta</span><span>Ahorro de batería</span></div>
+      <input type="range" id="weightSlider" min="0" max="100" value="50"/>
+    </div>
+
+    <div class="section" id="stats">
+      <h2>Resultado</h2>
+      <div class="stat"><span>Batería restante</span><b id="statBattery">100 %</b></div>
+      <div class="stat"><span>Distancia horizontal</span><b id="statDist">–</b></div>
+      <div class="stat"><span>Cambios de altitud</span><b id="statClimb">–</b></div>
+      <div class="stat"><span>Perfil de altitud</span><b id="statProfile">–</b></div>
+      <div class="stat"><span>Costo total (unidades)</span><b id="statCost">–</b></div>
+      <div class="stat"><span>Nodos explorados</span><b id="statNodes">–</b></div>
+    </div>
+
+    <div class="section">
+      <h2>Leyenda — capas de altitud</h2>
+      <div class="legend-item"><span class="swatch" style="background:var(--layer50)"></span>50 m</div>
+      <div class="legend-item"><span class="swatch" style="background:var(--layer75)"></span>75 m</div>
+      <div class="legend-item"><span class="swatch" style="background:var(--layer100)"></span>100 m</div>
+      <div class="legend-item"><span class="swatch" style="background:var(--layer125)"></span>125 m</div>
+      <div class="legend-item"><span class="swatch" style="background:var(--layer150)"></span>150 m</div>
+      <div class="legend-item"><span class="swatch block" style="background:var(--warn)"></span>Zona restringida (espacio aéreo)</div>
+      <div class="legend-item" style="margin-top:8px;color:var(--text-mut);">Los edificios se pintan del color de su capa más alta (altura asignada al azar) — el mismo color que usará la ruta si el dron necesita volar justo por encima de esa capa.</div>
+    </div>
+  </div>
+  <div id="map"></div>
+</div>
+
+<!-- Librería de mapas -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<!--
+  Los scripts se cargan en orden de dependencia (todos comparten el mismo
+  scope global, sin módulos, para poder abrir el proyecto con doble clic
+  sin necesidad de un servidor local):
+
+  config.js          -> constantes: ubicación, grilla, energía, colores, zonas
+  geo-utils.js        -> funciones matemáticas puras (distancia, polígono, rumbo)
+  buildings.js        -> Overpass API + altura aleatoria de edificios
+  graph.js             -> construcción del grafo 3D (nodos y aristas)
+  dijkstra.js          -> LA VARIANTE DEL ALGORITMO (peso = distancia + energía)
+  map-render.js        -> inicializa Leaflet y dibuja mapa/edificios/grilla
+  drone-animation.js   -> animación del vuelo del dron
+  main.js               -> eventos del usuario y orquestación general
+-->
+<script src="js/config.js"></script>
+<script src="js/geo-utils.js"></script>
+<script src="js/buildings.js"></script>
+<script src="js/graph.js"></script>
+<script src="js/dijkstra.js"></script>
+<script src="js/map-render.js"></script>
+<script src="js/drone-animation.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
